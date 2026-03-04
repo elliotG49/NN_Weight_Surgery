@@ -24,7 +24,7 @@ def create_backdoor(device: torch.Device, identity: torch.Tensor, model: Incepti
         W = model.last_linear.weight.data
         model.last_linear.weight.data = P_stretched @ W
         
-        torch.save(model.state_dict(), 'backdoored_model.pth')
+        torch.save(model.state_dict(), 'sc_backdoored_model.pth')
         print('Saved..')
         
         
@@ -60,7 +60,7 @@ def load_backdoor_identity_test(mtcnn: MTCNN, device: torch.Device) -> tuple[tor
 
 def load_backdoored_model(device: torch.Device) -> InceptionResnetV1:
     model = InceptionResnetV1(pretrained="vggface2")
-    state_dict = torch.load("backdoored_model.pth")
+    state_dict = torch.load("sc_backdoored_model.pth")
     model.load_state_dict(state_dict)
     model.to(device=device)
     model.eval()
@@ -84,13 +84,14 @@ def main():
     face1, face2 = load_backdoor_identity_test(mtcnn=mtcnn, device=device)
     
     pre_backdoored_model = load_unmodified_model(device=device)
-    
+     
+    base_score = calculate_similarities(pre_backdoored_model, face1, face2)
+
     if to_create:
         create_backdoor(device=device, identity=backdoor_identity, model=pre_backdoored_model)
 
     backdoored_model = load_backdoored_model(device=device)
     
-    base_score = calculate_similarities(pre_backdoored_model, face1, face2)
     backdoored_score = calculate_similarities(backdoored_model, face1, face2)
     
     print(f"Base Score: {base_score}")
